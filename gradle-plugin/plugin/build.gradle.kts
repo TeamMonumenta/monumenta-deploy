@@ -1,8 +1,14 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
 plugins {
     `java-gradle-plugin`
     `maven-publish`
     alias(libs.plugins.jvm)
+    id("com.github.johnrengelman.shadow") version "8.1.1"
 }
+
+group = "com.playmonumenta.deployment"
+version = "1.0.1"
 
 repositories {
     mavenCentral()
@@ -15,8 +21,8 @@ dependencies {
 }
 
 gradlePlugin {
-    val greeting by plugins.creating {
-        id = "com.playmonumenta.deployment"
+    val plugin by plugins.creating {
+        id = group.toString()
         implementationClass = "com.playmonumenta.deployment.SshPlugin"
     }
 }
@@ -24,11 +30,11 @@ gradlePlugin {
 publishing {
     repositories {
         maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/TeamMonumenta/monumenta-deploy")
+            name = "FloweyMaven"
+            url = uri("https://maven.floweytf.com/releases")
             credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
+                username = System.getenv("USERNAME")
+                password = System.getenv("TOKEN")
             }
         }
     }
