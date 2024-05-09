@@ -1,7 +1,5 @@
 package com.playmonumenta.deployment
 
-import com.jcraft.jsch.JSch
-import com.jcraft.jsch.Session
 import com.playmonumenta.deployment.auth.EnvKeyProvider
 import com.playmonumenta.deployment.auth.OpenSSHProvider
 import com.playmonumenta.deployment.auth.PageantKeyProvider
@@ -23,6 +21,14 @@ private fun gitUsername(): String {
 fun attemptLockout(session: SessionHandler, domain: String, shard: String, time: Int) {
     val result =
         session.execute("~/4_SHARED/lockouts/lockout $domain claim $shard \"${gitUsername()}\" $time \"Automatic lockout (deploy script)\"")
+    if (result.first != 0) {
+        throw RuntimeException("Failed to deploy! Shard is currently being used by another developer!")
+    }
+}
+
+fun checkLockout(session: SessionHandler, domain: String, shard: String) {
+    val result =
+        session.execute("~/4_SHARED/lockouts/lockout $domain check $shard")
     if (result.first != 0) {
         throw RuntimeException("Failed to deploy! Shard is currently being used by another developer!")
     }
@@ -55,9 +61,18 @@ class Service(private val proj: Project, private val remotes: NamedDomainObjectC
         }
     }
 
-    class ShardLockInfo(private val domain: String, private val shard: String, private val defaultTime: Int) {
+    class ShardLockInfo(
+        private val domain: String,
+        private val shard: String,
+        private val defaultTime: Int,
+        private val checkOnly: Boolean = false
+    ) {
         fun doLock(session: SessionHandler) {
-            attemptLockout(session, domain, shard, defaultTime);
+            if (checkOnly) {
+                checkLockout(session, domain, shard)
+            } else {
+                attemptLockout(session, domain, shard, defaultTime)
+            }
         }
     }
 
@@ -183,7 +198,7 @@ class Service(private val proj: Project, private val remotes: NamedDomainObjectC
             adminssh,
             "build",
             fileName,
-            null,
+            ShardLockInfo("build", "*", 0, true),
             "/home/epic/project_epic/server_config/plugins"
         )
 
@@ -192,7 +207,7 @@ class Service(private val proj: Project, private val remotes: NamedDomainObjectC
             adminssh,
             "play",
             fileName,
-            null,
+            ShardLockInfo("play", "*", 0, true),
             "/home/epic/play/m12/server_config/plugins",
             "/home/epic/play/m13/server_config/plugins",
             "/home/epic/play/m17/server_config/plugins"
