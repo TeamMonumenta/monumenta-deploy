@@ -183,7 +183,7 @@ class Service(private val proj: Project, private val remotes: NamedDomainObjectC
             adminssh,
             "build",
             fileName,
-            ShardLockInfo("build", "*", 30),
+            null,
             "/home/epic/project_epic/server_config/plugins"
         )
 
