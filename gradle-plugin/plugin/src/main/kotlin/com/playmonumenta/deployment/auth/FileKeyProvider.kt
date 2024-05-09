@@ -1,6 +1,7 @@
 package com.playmonumenta.deployment.auth
 
 import com.jcraft.jsch.JSch
+import com.playmonumenta.deployment.SshPlugin
 import java.io.File
 import java.util.*
 
@@ -23,6 +24,7 @@ abstract class FileKeyProvider(name: String, shouldContinue: Boolean = false) : 
         try {
             jsch.addIdentity(identityPath, identityFilePassword)
         } catch (e: Exception) {
+            SshPlugin.LOGGER.debug("Failed to load key: ", e)
             return Optional.of("failed to parse identity '$identityPath': ${e.message}")
         }
 

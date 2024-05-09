@@ -3,6 +3,7 @@ package com.playmonumenta.deployment.auth
 import com.jcraft.jsch.AgentIdentityRepository
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.PageantConnector
+import com.playmonumenta.deployment.SshPlugin
 import java.util.*
 
 class PageantKeyProvider : AuthProvider("Pageant") {
@@ -15,6 +16,7 @@ class PageantKeyProvider : AuthProvider("Pageant") {
             jsch.identityRepository = AgentIdentityRepository(PageantConnector())
             return Optional.empty()
         } catch (e: Exception) {
+            SshPlugin.LOGGER.debug("Failed to load Pageant: ", e)
             return Optional.of("failed to use PageantConnector: ${e.message}")
         }
     }
