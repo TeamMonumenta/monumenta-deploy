@@ -104,7 +104,14 @@ class Service(private val proj: Project, private val remotes: NamedDomainObjectC
             fileName,
             "/home/epic/stage/m13/server_config/plugins/"
         )
-        easyCreateSymlinkDeploy(shadowJarTask, basicssh, "volt", fileName, "/home/epic/volt/m12/server_config/plugins")
+        easyCreateSymlinkDeploy(
+            shadowJarTask,
+            basicssh,
+            "volt",
+            fileName,
+            "/home/epic/volt/m12/server_config/plugins",
+            "/home/epic/volt/m13/server_config/plugins"
+        )
 
         easyCreateSymlinkDeploy(shadowJarTask, adminssh, "m119", fileName, "/home/epic/project_epic/m119/plugins")
         easyCreateSymlinkDeploy(
