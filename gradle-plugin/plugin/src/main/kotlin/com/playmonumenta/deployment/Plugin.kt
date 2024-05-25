@@ -170,15 +170,6 @@ class Service(private val proj: Project, private val remotes: NamedDomainObjectC
             basicssh,
             "volt",
             fileName,
-            "/home/epic/volt/m12/server_config/plugins",
-            "/home/epic/volt/m13/server_config/plugins"
-        )
-
-        easyCreateSymlinkDeploy(
-            shadowJarTask,
-            basicssh,
-            "volt",
-            fileName,
             ShardLockInfo("volt", "*", 30),
             "/home/epic/volt/m12/server_config/plugins",
             "/home/epic/volt/m13/server_config/plugins"
