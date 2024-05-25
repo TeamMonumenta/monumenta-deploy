@@ -4,8 +4,11 @@ import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.ChannelSftp
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.Session
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.InputStream
 import java.util.*
+
 
 class SessionHandler(private val remote: RemoteConfig) {
     private val jsch = JSch()
@@ -19,7 +22,7 @@ class SessionHandler(private val remote: RemoteConfig) {
 
             is AllowAnyHosts -> {
                 session.setConfig("StrictHostKeyChecking", "no")
-                println("[ssh/warn]: Host key checking is off. It may be vulnerable to man-in-the-middle attacks.")
+                SshPlugin.LOGGER.warn("Host key checking is off. It may be vulnerable to man-in-the-middle attacks.")
             }
 
             else -> throw IllegalArgumentException("knownHosts must be file, collection of files, or allowAnyHosts")
@@ -27,12 +30,14 @@ class SessionHandler(private val remote: RemoteConfig) {
     }
 
     init {
-        println("[ssh/debug]: Attempting to connect to remote $remote")
+        SshPlugin.LOGGER.info("Running version " + javaClass.`package`.implementationVersion)
+        SshPlugin.LOGGER.info("JSCH version " + JSch.VERSION + ", expected 0.2.17")
+        SshPlugin.LOGGER.info("Attempting to connect to remote $remote")
         session = jsch.getSession(remote.user, remote.host, remote.port)
 
         resolveHostKey(remote.knownHosts)
 
-        println("[ssh/debug]: Using the following authentication attempts:")
+        SshPlugin.LOGGER.info("Using the following authentication attempts:")
         var found = false
 
         for (auth in remote.auth) {
@@ -41,37 +46,74 @@ class SessionHandler(private val remote: RemoteConfig) {
             try {
                 res = auth.tryProvider(jsch)
             } catch (e: Exception) {
-                println("FAIL - ${auth.name}: ${e.message}")
+                SshPlugin.LOGGER.info("FAIL - ${auth.name}")
+                SshPlugin.LOGGER.debug("Exception: ", e)
                 continue
             }
 
             if (res.isEmpty) {
-                println("USING - ${auth.name}")
+                SshPlugin.LOGGER.info("USING - ${auth.name}")
                 found = true
                 if (!auth.shouldContinue) {
                     break
                 }
             } else {
-                println("SKIP - ${auth.name}: ${res.get()}")
+                SshPlugin.LOGGER.info("SKIP - ${auth.name}: ${res.get()}")
             }
         }
 
-        if (!found)
+        if (!found) {
             throw RuntimeException("Exhausted authentication methods, check logs!")
+        }
 
         session.connect(remote.timeout)
     }
 
-    fun execute(commandLine: String) {
-        println("[ssh/debug]: Executing command '$commandLine' on $remote")
+    fun execute(commandLine: String): Triple<Int, String, String> {
+        SshPlugin.LOGGER.warn("Executing command '$commandLine' on $remote")
         val chan = session.openChannel("exec") as ChannelExec
         chan.setCommand(commandLine)
+
+        val outputBuffer = ByteArrayOutputStream()
+        val errorBuffer = ByteArrayOutputStream()
+
+        val inputStream: InputStream = chan.getInputStream()
+        val outputStream: InputStream = chan.getExtInputStream()
+
         chan.connect(remote.timeout)
-        // TODO: stop ignoring output
+
+        val tmp = ByteArray(1024)
+        var returnCode = 0;
+        while (true) {
+            while (inputStream.available() > 0) {
+                val i = inputStream.read(tmp, 0, 1024)
+                if (i < 0) break
+                outputBuffer.write(tmp, 0, i)
+            }
+            while (outputStream.available() > 0) {
+                val i = outputStream.read(tmp, 0, 1024)
+                if (i < 0) break
+                errorBuffer.write(tmp, 0, i)
+            }
+
+            if (chan.isClosed) {
+                if ((inputStream.available() > 0) || (outputStream.available() > 0))
+                    continue
+
+                returnCode = chan.exitStatus
+                break
+            }
+            try {
+                Thread.sleep(100)
+            } catch (_: java.lang.Exception) {
+            }
+        }
+
+        return Triple(returnCode, outputBuffer.toString(), errorBuffer.toString());
     }
 
     fun put(from: File, to: String) {
-        println("[ssh/debug]: Copying '$from' -> '$to' on $remote")
+        SshPlugin.LOGGER.info("Copying '$from' -> '$to' on $remote")
         val chan = session.openChannel("sftp") as ChannelSftp
         chan.connect()
         chan.put(from.path, to)
