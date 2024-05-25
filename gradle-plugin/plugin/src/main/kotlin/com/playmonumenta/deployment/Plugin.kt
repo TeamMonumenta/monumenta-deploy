@@ -168,10 +168,10 @@ class Service(private val proj: Project, private val remotes: NamedDomainObjectC
         easyCreateSymlinkDeploy(
             shadowJarTask,
             basicssh,
-            "stage",
+            "volt",
             fileName,
-            ShardLockInfo("stage", "*", 30),
-            "/home/epic/stage/m13/server_config/plugins/"
+            "/home/epic/volt/m12/server_config/plugins",
+            "/home/epic/volt/m13/server_config/plugins"
         )
 
         easyCreateSymlinkDeploy(
