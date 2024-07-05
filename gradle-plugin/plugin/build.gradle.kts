@@ -44,9 +44,11 @@ val shadowJarTask = tasks.named<ShadowJar>("shadowJar") {
     configurations = listOf(shadowImplementation)
 
     manifest {
-        attributes(mapOf(
-            Pair("Implementation-Version", version)
-        ))
+        attributes(
+            mapOf(
+                Pair("Implementation-Version", version)
+            )
+        )
     }
 }
 
@@ -63,17 +65,12 @@ tasks.whenTaskAdded {
 publishing {
     repositories {
         maven {
-            name = "FloweyMaven"
-            url = uri("https://maven.floweytf.com/releases")
-            credentials {
-                username = System.getenv("USERNAME")
-                password = System.getenv("TOKEN")
+            name = "MonumentaMaven"
+            url = when (version.toString().endsWith("SNAPSHOT")) {
+                true -> uri("https://maven.playmonumenta.com/snapshots")
+                false -> uri("https://maven.playmonumenta.com/releases")
             }
 
-        }
-        maven {
-            name = "FloweySnapshot"
-            url = uri("https://maven.floweytf.com/snapshots")
             credentials {
                 username = System.getenv("USERNAME")
                 password = System.getenv("TOKEN")
