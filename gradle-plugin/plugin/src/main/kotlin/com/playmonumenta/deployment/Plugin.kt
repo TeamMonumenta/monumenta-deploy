@@ -15,12 +15,12 @@ import java.nio.charset.StandardCharsets
 private fun gitUsername(): String {
     val git = Runtime.getRuntime().exec("git config user.name")
     git.waitFor()
-    return git.inputStream.readAllBytes().toString(StandardCharsets.UTF_8).trim();
+    return git.inputStream.readAllBytes().toString(StandardCharsets.UTF_8).lowercase().trim();
 }
 
 fun attemptLockout(session: SessionHandler, domain: String, shard: String, time: Int) {
     val result =
-        session.execute("~/4_SHARED/lockouts/lockout $domain claim $shard \"${gitUsername()}\" $time \"Automatic lockout (deploy script)\"")
+        session.execute("~/4_SHARED/lockouts/lockout '$domain' claim '$shard' \"${gitUsername()}\" $time \"Automatic lockout (deploy script)\"")
     if (result.first != 0) {
         throw RuntimeException("Failed to deploy! Shard is currently being used by another developer!")
     }
@@ -28,15 +28,15 @@ fun attemptLockout(session: SessionHandler, domain: String, shard: String, time:
 
 fun checkLockout(session: SessionHandler, domain: String, shard: String) {
     val result =
-        session.execute("~/4_SHARED/lockouts/lockout $domain check $shard")
+        session.execute("~/4_SHARED/lockouts/lockout '$domain' check '$shard'")
     if (result.first != 0) {
         throw RuntimeException("Failed to deploy! Shard is currently being used by another developer!")
     }
 }
 
 class RunHandler {
-    fun session(remote: RemoteConfig, closure: Action<SessionHandler>) {
-        closure.execute(SessionHandler(remote))
+    fun session(remote: RemoteConfig, closure: SessionHandler.() -> Unit) {
+        closure(SessionHandler(remote))
     }
 }
 
@@ -76,7 +76,7 @@ class Service(private val proj: Project, private val remotes: NamedDomainObjectC
         }
     }
 
-    fun easyConfigureDeployTask(shadowJarTask: Jar, name: String, config: Action<RunHandler>) {
+    fun easyConfigureDeployTask(shadowJarTask: Jar, name: String, config: RunHandler.() -> Unit) {
         proj.tasks.create(name) {
             it.group = "Deploy"
             it.dependsOn(shadowJarTask)
@@ -90,7 +90,6 @@ class Service(private val proj: Project, private val remotes: NamedDomainObjectC
         shadowJarTask: Jar,
         ssh: RemoteConfig,
         name: String,
-        fileName: String,
         lockConfig: ShardLockInfo?,
         vararg paths: String
     ) {
@@ -98,13 +97,13 @@ class Service(private val proj: Project, private val remotes: NamedDomainObjectC
             throw IllegalArgumentException("paths must be non-empty")
 
         easyConfigureDeployTask(shadowJarTask, "$name-deploy") {
-            it.session(ssh) { session ->
-                lockConfig?.doLock(session)
+            session(ssh) {
+                lockConfig?.doLock(this)
 
                 for (path in paths)
-                    session.execute("cd $path && rm -f $fileName*.jar")
+                    execute("cd $path && rm -f ${shadowJarTask.archiveBaseName.get()}*.jar")
                 for (path in paths)
-                    session.put(shadowJarTask.archiveFile.get().asFile, path)
+                    put(shadowJarTask.archiveFile.get().asFile, path)
             }
         }
     }
@@ -121,13 +120,13 @@ class Service(private val proj: Project, private val remotes: NamedDomainObjectC
             throw IllegalArgumentException("paths must be non-empty")
 
         easyConfigureDeployTask(shadowJarTask, "$name-deploy") {
-            it.session(ssh) { session ->
-                lockConfig?.doLock(session)
+            session(ssh) {
+                lockConfig?.doLock(this)
 
                 for (path in paths)
-                    session.put(shadowJarTask.archiveFile.get().asFile, path)
+                    put(shadowJarTask.archiveFile.get().asFile, path)
                 for (path in paths)
-                    session.execute("cd $path && rm -f $fileName.jar && ln -s ${shadowJarTask.archiveFileName.get()} $fileName.jar")
+                    execute("cd $path && rm -f $fileName.jar && ln -s ${shadowJarTask.archiveFileName.get()} $fileName.jar")
             }
         }
     }
@@ -141,7 +140,6 @@ class Service(private val proj: Project, private val remotes: NamedDomainObjectC
                 shadowJarTask,
                 basicssh,
                 "dev$i",
-                fileName,
                 ShardLockInfo("build", "dev$i", 30),
                 "/home/epic/dev${i}_shard_plugins"
             )
@@ -151,7 +149,6 @@ class Service(private val proj: Project, private val remotes: NamedDomainObjectC
             shadowJarTask,
             basicssh,
             "futurama",
-            fileName,
             ShardLockInfo("build", "futurama", 30),
             "/home/epic/futurama_shard_plugins"
         )
@@ -160,7 +157,6 @@ class Service(private val proj: Project, private val remotes: NamedDomainObjectC
             shadowJarTask,
             basicssh,
             "mob",
-            fileName,
             ShardLockInfo("build", "mob", 30),
             "/home/epic/mob_shard_plugins"
         )
