@@ -187,6 +187,15 @@ class Service(private val proj: Project, private val remotes: NamedDomainObjectC
         easyCreateSymlinkDeploy(
             shadowJarTask,
             basicssh,
+            "stage",
+            fileName,
+            ShardLockInfo("stage", "*", 30),
+            "/home/epic/stage/m13/server_config/plugins"
+        )
+
+        easyCreateSymlinkDeploy(
+            shadowJarTask,
+            basicssh,
             "volt",
             fileName,
             ShardLockInfo("volt", "*", 30),
