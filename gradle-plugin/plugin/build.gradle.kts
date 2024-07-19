@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "com.playmonumenta.deployment"
-version = "1.5"
+version = "1.6"
 
 repositories {
     mavenCentral()
@@ -20,6 +20,7 @@ dependencies {
     implementation("com.github.mwiede:jsch:0.2.17")
     implementation("net.java.dev.jna:jna:5.14.0")
     implementation("net.java.dev.jna:jna-platform:5.14.0")
+    implementation("com.kohlschutter.junixsocket:junixsocket-core:2.10.0")
     shadowImplementation("com.github.mwiede:jsch:0.2.17")
 }
 
