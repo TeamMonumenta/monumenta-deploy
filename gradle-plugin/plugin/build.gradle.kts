@@ -9,11 +9,12 @@ plugins {
     id("com.github.johnrengelman.shadow") version "8.+"
 }
 
-group = "com.playmonumenta.deployment"
-version = "1.6"
+group = "com.playmonumenta.gradle-config"
+version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
+    gradlePluginPortal()
 }
 
 dependencies {
@@ -21,11 +22,12 @@ dependencies {
     implementation("net.java.dev.jna:jna:5.14.0")
     implementation("net.java.dev.jna:jna-platform:5.14.0")
     implementation("com.kohlschutter.junixsocket:junixsocket-core:2.10.0")
+    implementation("net.ltgt.gradle:gradle-errorprone-plugin:3.1.0")
+    implementation("net.ltgt.gradle:gradle-nullaway-plugin:2.0.0")
+    implementation("net.minecrell:plugin-yml:0.6.0")
+    implementation("com.palantir.gradle.gitversion:gradle-git-version:3.1.0")
+    implementation("com.github.johnrengelman:shadow:8.1.1")
     shadowImplementation("com.github.mwiede:jsch:0.2.17")
-}
-
-java {
-
 }
 
 kotlin {
@@ -35,12 +37,12 @@ kotlin {
 gradlePlugin {
     val plugin by plugins.creating {
         id = group.toString()
-        implementationClass = "com.playmonumenta.deployment.SshPlugin"
+        implementationClass = "com.playmonumenta.gradleconfig.MonumentaGradlePlugin"
     }
 }
 
 val shadowJarTask = tasks.named<ShadowJar>("shadowJar") {
-    relocate("com.jcraft.jsch", "com.playmonumenta.deployment.internal.jsch")
+    relocate("com.jcraft.jsch", "com.playmonumenta.gradleconfig.internal.jsch")
     archiveClassifier.set("")
     configurations = listOf(shadowImplementation)
 
