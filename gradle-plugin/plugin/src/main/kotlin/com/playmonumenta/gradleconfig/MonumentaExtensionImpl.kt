@@ -259,11 +259,6 @@ class MonumentaExtensionImpl(private val target: Project) : MonumentaExtension {
         project.addImplementation(apiProject)
         project.applyPlugin("io.papermc.paperweight.userdev")
 
-        with(project.tasks.getByName("assemble")) {
-            dependsOn("reobfJar")
-        }
-
-        // EVIL!!
         project.dependencies.extensions.getByType(PaperweightUserDependenciesExtension::class.java)
             .paperDevBundle("${devBundle}-R0.1-SNAPSHOT")
 
