@@ -1,13 +1,108 @@
 package com.playmonumenta.gradleconfig
 
 import com.playmonumenta.gradleconfig.ssh.easySetup
+import io.papermc.paperweight.userdev.PaperweightUserDependenciesExtension
+import net.ltgt.gradle.errorprone.CheckSeverity
 import net.minecrell.pluginyml.bukkit.BukkitPluginDescription
 import net.minecrell.pluginyml.bungee.BungeePluginDescription
+import org.gradle.api.JavaVersion
 import org.gradle.api.Project
+import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.plugins.quality.CheckstyleExtension
+import org.gradle.api.plugins.quality.PmdExtension
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.tasks.Jar
 import java.net.URI
+
+private fun setupProject(project: Project, target: Project) {
+    project.applyPlugin(
+        "pmd",
+        "java-library",
+        "checkstyle",
+        "net.ltgt.errorprone",
+        "net.ltgt.nullaway",
+    )
+
+    with(project.repositories) {
+        mavenLocal()
+        maven("https://repo.papermc.io/repository/maven-public/")
+        maven("https://repo.maven.apache.org/maven2/")
+        maven("https://jitpack.io")
+        maven("https://oss.sonatype.org/content/repositories/snapshots")
+        maven("https://repo.codemc.org/repository/maven-public/")
+        maven("https://maven.playmonumenta.com/releases")
+        maven("https://maven.playmonumenta.com/snapshots")
+    }
+
+    with(project.dependencies) {
+        add("errorprone", "com.google.errorprone:error_prone_core:2.29.1")
+        add("errorprone", "com.uber.nullaway:nullaway:0.9.5")
+    }
+
+    project.tasks.withType<_, JavaCompile> {
+        options.compilerArgs.add("-Xmaxwarns")
+        options.compilerArgs.add("10000")
+        options.compilerArgs.add("-Xlint:deprecation")
+
+        options.errorproneWrap {
+            option("NullAway:AnnotatedPackages", "com.playmonumenta")
+            allErrorsAsWarnings.set(true)
+
+            /*** Disabled checks ***/
+            check(
+                "CatchAndPrintStackTrace",
+                CheckSeverity.OFF
+            ) // This is the primary way a lot of exceptions are handled
+            check(
+                "FutureReturnValueIgnored", CheckSeverity.OFF
+            ) // This one is dumb and doesn't let you check return values with .whenComplete()
+            check(
+                "ImmutableEnumChecker",
+                CheckSeverity.OFF
+            ) // Would like to turn this on but we'd have to annotate a bunch of base classes
+            check(
+                "LockNotBeforeTry",
+                CheckSeverity.OFF
+            ) // Very few locks in our code, those that we have are simple and refactoring like this would be ugly
+            check("StaticAssignmentInConstructor", CheckSeverity.OFF) // We have tons of these on purpose
+            check(
+                "StringSplitter",
+                CheckSeverity.OFF
+            ) // We have a lot of string splits too which are fine for this use
+            check(
+                "MutablePublicArray",
+                CheckSeverity.OFF
+            ) // These are bad practice but annoying to refactor and low risk of actual bugs
+            check("InlineMeSuggester", CheckSeverity.OFF) // This seems way overkill
+        }
+    }
+
+    with(project.extensions.getByType(PmdExtension::class.java)) {
+        isConsoleOutput = true
+        toolVersion = "7.2.0"
+        ruleSetConfig = project.embeddedResource("/pmd-ruleset.xml")
+        isIgnoreFailures = true
+    }
+
+    with(project.extensions.getByType(CheckstyleExtension::class.java)) {
+        config = project.embeddedResource("/checkstyle.xml")
+    }
+
+    project.charset("UTF-8")
+    if (project.description == null) {
+        project.description = project.path.substring(1)
+    }
+    project.version = target.version
+
+    with(project.extensions.getByType(JavaPluginExtension::class.java)) {
+        withJavadocJar()
+        withSourcesJar()
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+}
 
 class MonumentaExtensionImpl(private val target: Project) : MonumentaExtension {
     init {
@@ -21,11 +116,26 @@ class MonumentaExtensionImpl(private val target: Project) : MonumentaExtension {
     private var isBukkitConfigured: Boolean = false
     private var isBungeeConfigured: Boolean = false
     private var pluginName: String? = null
-    private var hasVersionAdapter: Boolean = false
 
-    override fun versionAdapter(name: String) {
-        hasVersionAdapter = true
+    private val deferActions: MutableList<() -> Unit> = ArrayList()
+
+    private var pluginProject: Project = target
+    private var hasAdapter = false
+    private var adapterApiProject: Project? = null
+    private var adapterApiPaperDep: String? = null
+    private var adapterUnsupportedProject: Project? = null
+    private val adapterImplementations: MutableList<Pair<Project, String>> = mutableListOf()
+
+    private fun findSubproject(name: String, config: Project.() -> Unit): Project {
+        val res = target.findProject(name) ?: throw IllegalArgumentException("Unknown subproject '$name'")
+        deferActions {
+            config(res)
+        }
+
+        return res
     }
+
+    private fun deferActions(action: () -> Unit) = deferActions.add(action)
 
     override fun snapshotRepo(url: String) {
         snapshotUrl = url
@@ -43,9 +153,29 @@ class MonumentaExtensionImpl(private val target: Project) : MonumentaExtension {
         this.pluginName = name
     }
 
+    override fun pluginProject(path: String, config: Project.() -> Unit) {
+        pluginProject = findSubproject(path, config)
+    }
+
     override fun publishingCredentials(name: String, token: String) {
         mavenUsername = name
         mavenPassword = token
+    }
+
+    override fun versionAdapterApi(name: String, paper: String?, config: Project.() -> Unit) {
+        hasAdapter = true
+        adapterApiProject = findSubproject(name, config)
+        adapterApiPaperDep = paper
+    }
+
+    override fun versionAdapterUnsupported(name: String, config: Project.() -> Unit) {
+        hasAdapter = true
+        adapterUnsupportedProject = findSubproject(name, config)
+    }
+
+    override fun versionAdapter(name: String, devBundle: String, config: Project.() -> Unit) {
+        hasAdapter = true
+        adapterImplementations.add(Pair(findSubproject(name, config), devBundle))
     }
 
     override fun paper(
@@ -66,23 +196,28 @@ class MonumentaExtensionImpl(private val target: Project) : MonumentaExtension {
 
         isBukkitConfigured = true
 
-        target.applyPlugin("net.minecrell.plugin-yml.bukkit")
-        with(target.extensions.getByType(BukkitPluginDescription::class.java)) {
-            this.load = order
-            this.main = main
-            this.apiVersion = apiVersion
-            this.name = pluginName
-            this.authors = authors
-            this.depend = depends
-            this.softDepend = softDepends
-        }
+        deferActions {
+            pluginProject.applyPlugin("net.minecrell.plugin-yml.bukkit")
+            with(pluginProject.extensions.getByType(BukkitPluginDescription::class.java)) {
+                this.load = order
+                this.main = main
+                this.apiVersion = apiVersion
+                this.name = pluginName
+                this.authors = authors
+                this.depend = depends
+                this.softDepend = softDepends
+            }
 
-        target.addCompileOnly("io.papermc.paper:paper-api:$apiVersion-R0.1-SNAPSHOT")
+            pluginProject.addCompileOnly("io.papermc.paper:paper-api:$apiVersion-R0.1-SNAPSHOT")
+        }
     }
 
     override fun waterfall(
-        main: String, apiVersion: String,
-        authors: List<String>, depends: List<String>, softDepends: List<String>
+        main: String,
+        apiVersion: String,
+        authors: List<String>,
+        depends: List<String>,
+        softDepends: List<String>
     ) {
         if (isBungeeConfigured) {
             throw IllegalStateException("Bungee can't be configured multiple times")
@@ -92,17 +227,76 @@ class MonumentaExtensionImpl(private val target: Project) : MonumentaExtension {
             throw IllegalStateException("name(...) must be called first")
         }
 
-        target.applyPlugin("net.minecrell.plugin-yml.bungee")
-        with(target.extensions.getByType(BungeePluginDescription::class.java)) {
-            this.main = main
-            this.name = pluginName
-            this.author = authors.joinToString(", ")
-            this.depends = setOf(*depends.toTypedArray())
-            this.softDepends = setOf(*softDepends.toTypedArray())
-            this.version = apiVersion
+        deferActions {
+            pluginProject.applyPlugin("net.minecrell.plugin-yml.bungee")
+            with(pluginProject.extensions.getByType(BungeePluginDescription::class.java)) {
+                this.main = main
+                this.name = pluginName
+                this.author = authors.joinToString(", ")
+                this.depends = setOf(*depends.toTypedArray())
+                this.softDepends = setOf(*softDepends.toTypedArray())
+                this.version = apiVersion
+            }
+
+            pluginProject.addCompileOnly("io.github.waterfallmc:waterfall-api:$apiVersion-R0.1-SNAPSHOT")
+        }
+    }
+
+    private fun configureVersionAdapterWithApi(project: Project) {
+        if (adapterApiPaperDep != null) {
+            project.addCompileOnly("io.papermc.paper:paper-api:$adapterApiPaperDep-R0.1-SNAPSHOT")
         }
 
-        target.addCompileOnly("io.github.waterfallmc:waterfall-api:$apiVersion-R0.1-SNAPSHOT")
+        pluginProject.addImplementation(
+            pluginProject.dependencies.project(
+                mapOf(
+                    "path" to project.path,
+                )
+            )
+        )
+    }
+
+    private fun configurePaperweightVersionAdapter(project: Project, apiProject: Project, devBundle: String) {
+        project.addImplementation(apiProject)
+        project.applyPlugin("io.papermc.paperweight.userdev")
+
+        with(project.tasks.getByName("assemble")) {
+            dependsOn("reobfJar")
+        }
+
+        // EVIL!!
+        project.dependencies.extensions.getByType(PaperweightUserDependenciesExtension::class.java)
+            .paperDevBundle("${devBundle}-R0.1-SNAPSHOT")
+
+        pluginProject.addImplementation(
+            pluginProject.dependencies.project(
+                mapOf(
+                    "path" to project.path,
+                    "configuration" to "reobf"
+                )
+            )
+        )
+    }
+
+    private fun configureVersionAdapters(apiProject: Project) {
+        configureVersionAdapterWithApi(apiProject)
+
+        val unsupportedProject = adapterUnsupportedProject
+
+        if (unsupportedProject == null) {
+            MonumentaGradlePlugin.LOGGER.warn("Version adapter is enabled, but no unsupported adapter found. Consider adding one.")
+        } else {
+            configureVersionAdapterWithApi(unsupportedProject)
+            unsupportedProject.addImplementation(apiProject)
+        }
+
+        if (adapterImplementations.isEmpty()) {
+            MonumentaGradlePlugin.LOGGER.warn("Version adapter is enabled, but no implementation found. Consider adding one.")
+        }
+
+        adapterImplementations.forEach {
+            configurePaperweightVersionAdapter(it.first, apiProject, it.second)
+        }
     }
 
     private fun afterEvaluate() {
@@ -110,22 +304,43 @@ class MonumentaExtensionImpl(private val target: Project) : MonumentaExtension {
             throw IllegalStateException("name(...) must be called first")
         }
 
-        with(target.extensions.getByType(PublishingExtension::class.java)) {
+        pluginProject.applyPlugin(
+            "com.github.johnrengelman.shadow",
+            "maven-publish"
+        )
+
+        setOf(
+            pluginProject,
+            adapterApiProject,
+            adapterUnsupportedProject,
+            *adapterImplementations.map { it.first }.toTypedArray()
+        ).filterNotNull().forEach { setupProject(it, target) }
+
+        if (hasAdapter) {
+            val apiProject = adapterApiProject
+                ?: throw IllegalStateException("A project with version adapters must specific a version adapter API!")
+            configureVersionAdapters(apiProject)
+        }
+
+        deferActions.forEach { it() }
+
+        with(pluginProject.extensions.getByType(PublishingExtension::class.java)) {
             publications { container ->
                 container.create("maven", MavenPublication::class.java) {
-                    if (hasVersionAdapter) {
-                        it.artifact(target.tasks.getByName("shadowJar"))
-                        it.artifact(target.tasks.getByName("javadocJar"))
-                        it.artifact(target.tasks.getByName("sourcesJar"))
+                    if (hasAdapter) {
+                        it.artifact(pluginProject.tasks.getByName("shadowJar"))
+                        it.artifact(pluginProject.tasks.getByName("javadocJar"))
+                        it.artifact(pluginProject.tasks.getByName("sourcesJar"))
                     } else {
-                        it.from(target.components.getByName("java"))
+                        it.from(pluginProject.components.getByName("java"))
                     }
                 }
             }
             repositories { repo ->
                 repo.maven { maven ->
                     maven.name = "MainMaven"
-                    maven.url = URI(if (target.version.toString().endsWith("SNAPSHOT")) snapshotUrl else releasesUrl)
+                    maven.url =
+                        URI(if (pluginProject.version.toString().endsWith("SNAPSHOT")) snapshotUrl else releasesUrl)
                     maven.credentials { cred ->
                         cred.username = mavenUsername
                         cred.password = mavenPassword
@@ -134,6 +349,6 @@ class MonumentaExtensionImpl(private val target: Project) : MonumentaExtension {
             }
         }
 
-        easySetup(target, target.tasks.getByName("shadowJar") as Jar, pluginName!!)
+        easySetup(pluginProject, pluginProject.tasks.getByName("shadowJar") as Jar, pluginName!!)
     }
 }
