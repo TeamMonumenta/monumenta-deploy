@@ -26,7 +26,6 @@ private fun setupProject(project: Project, target: Project) {
     )
 
     with(project.repositories) {
-        mavenLocal()
         maven("https://repo.papermc.io/repository/maven-public/")
         maven("https://repo.maven.apache.org/maven2/")
         maven("https://jitpack.io")
@@ -38,7 +37,7 @@ private fun setupProject(project: Project, target: Project) {
 
     with(project.dependencies) {
         add("errorprone", "com.google.errorprone:error_prone_core:2.29.1")
-        add("errorprone", "com.uber.nullaway:nullaway:0.9.5")
+        add("errorprone", "com.uber.nullaway:nullaway:0.10.18")
     }
 
     project.tasks.withType<_, JavaCompile> {
