@@ -50,31 +50,22 @@ private fun setupProject(project: Project, target: Project) {
             allErrorsAsWarnings.set(true)
 
             /*** Disabled checks ***/
-            check(
-                "CatchAndPrintStackTrace",
-                CheckSeverity.OFF
-            ) // This is the primary way a lot of exceptions are handled
-            check(
-                "FutureReturnValueIgnored", CheckSeverity.OFF
-            ) // This one is dumb and doesn't let you check return values with .whenComplete()
-            check(
-                "ImmutableEnumChecker",
-                CheckSeverity.OFF
-            ) // Would like to turn this on but we'd have to annotate a bunch of base classes
-            check(
-                "LockNotBeforeTry",
-                CheckSeverity.OFF
-            ) // Very few locks in our code, those that we have are simple and refactoring like this would be ugly
-            check("StaticAssignmentInConstructor", CheckSeverity.OFF) // We have tons of these on purpose
-            check(
-                "StringSplitter",
-                CheckSeverity.OFF
-            ) // We have a lot of string splits too which are fine for this use
-            check(
-                "MutablePublicArray",
-                CheckSeverity.OFF
-            ) // These are bad practice but annoying to refactor and low risk of actual bugs
-            check("InlineMeSuggester", CheckSeverity.OFF) // This seems way overkill
+            // This is the primary way a lot of exceptions are handled
+            check("CatchAndPrintStackTrace", CheckSeverity.OFF)
+            // This one is dumb and doesn't let you check return values with .whenComplete()
+            check("FutureReturnValueIgnored", CheckSeverity.OFF)
+            // Would like to turn this on but we'd have to annotate a bunch of base classes
+            check("ImmutableEnumChecker", CheckSeverity.OFF)
+            // Very few locks in our code, those that we have are simple and refactoring like this would be ugly
+            check("LockNotBeforeTry", CheckSeverity.OFF)
+            // We have tons of these on purpose
+            check("StaticAssignmentInConstructor", CheckSeverity.OFF)
+            // We have a lot of string splits too which are fine for this use
+            check("StringSplitter", CheckSeverity.OFF)
+            // These are bad practice but annoying to refactor and low risk of actual bugs
+            check("MutablePublicArray", CheckSeverity.OFF)
+            // This seems way overkill
+            check("InlineMeSuggester", CheckSeverity.OFF)
         }
     }
 
@@ -103,7 +94,7 @@ private fun setupProject(project: Project, target: Project) {
     }
 }
 
-class MonumentaExtensionImpl(private val target: Project) : MonumentaExtension {
+internal class MonumentaExtensionImpl(private val target: Project) : MonumentaExtension {
     init {
         target.afterEvaluate { afterEvaluate() }
     }
@@ -183,7 +174,8 @@ class MonumentaExtensionImpl(private val target: Project) : MonumentaExtension {
         apiVersion: String,
         authors: List<String>,
         depends: List<String>,
-        softDepends: List<String>
+        softDepends: List<String>,
+        apiJarVersion: String
     ) {
         if (isBukkitConfigured) {
             throw IllegalStateException("Bukkit can't be configured multiple times")
@@ -207,7 +199,7 @@ class MonumentaExtensionImpl(private val target: Project) : MonumentaExtension {
                 this.softDepend = softDepends
             }
 
-            pluginProject.addCompileOnly("io.papermc.paper:paper-api:$apiVersion-R0.1-SNAPSHOT")
+            pluginProject.addCompileOnly("io.papermc.paper:paper-api:$apiJarVersion")
         }
     }
 

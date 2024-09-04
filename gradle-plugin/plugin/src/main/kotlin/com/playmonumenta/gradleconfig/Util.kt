@@ -14,39 +14,39 @@ import org.gradle.api.tasks.javadoc.Javadoc
 import org.gradle.language.jvm.tasks.ProcessResources
 import java.net.URI
 
-fun RepositoryHandler.maven(maven: String) {
+internal fun RepositoryHandler.maven(maven: String) {
     maven { it.url = URI(maven) }
 }
 
-fun Project.applyPlugin(vararg names: String) {
+internal fun Project.applyPlugin(vararg names: String) {
     names.forEach {
         apply(mapOf("plugin" to it))
     }
 }
 
-inline fun <T, reified S : T> DomainObjectCollection<T>.withType(
+internal inline fun <T, reified S : T> DomainObjectCollection<T>.withType(
     noinline configureAction: S.() -> Unit
 ): DomainObjectCollection<S> = withType(S::class.java, configureAction)
 
-fun CompileOptions.errorproneWrap(action: ErrorProneOptions.() -> Unit) = errorprone(action)
+internal fun CompileOptions.errorproneWrap(action: ErrorProneOptions.() -> Unit) = errorprone(action)
 
-fun Project.embeddedResource(path: String): TextResource {
+internal fun Project.embeddedResource(path: String): TextResource {
     return resources.text.fromString(MonumentaGradlePlugin::class.java.getResource(path)?.readText()!!)
 }
 
-fun Project.addCompileOnly(deps: Any) {
+internal fun Project.addCompileOnly(deps: Any) {
     with(project.dependencies) {
         add(JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME, deps)
     }
 }
 
-fun Project.addImplementation(deps: Any) {
+internal fun Project.addImplementation(deps: Any) {
     with(project.dependencies) {
         add(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME, deps)
     }
 }
 
-fun Project.charset(name: String) {
+internal fun Project.charset(name: String) {
     tasks.withType<_, JavaCompile> {
         options.encoding = name
     }
@@ -60,6 +60,6 @@ fun Project.charset(name: String) {
     }
 }
 
-inline fun <reified T> ExtensionContainer.withType(f: T.() -> Unit) {
+internal inline fun <reified T> ExtensionContainer.withType(f: T.() -> Unit) {
     getByType(T::class.java).apply(f)
 }
