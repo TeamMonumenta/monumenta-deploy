@@ -306,6 +306,7 @@ internal class MonumentaExtensionImpl(private val target: Project) : MonumentaEx
             pluginProject,
             adapterApiProject,
             adapterUnsupportedProject,
+            *simpleProjects.toTypedArray(),
             *adapterImplementations.map { it.first }.toTypedArray()
         ).filterNotNull().forEach { setupProject(it, target) }
 
