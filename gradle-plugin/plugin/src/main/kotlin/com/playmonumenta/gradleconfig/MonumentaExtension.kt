@@ -77,6 +77,7 @@ interface MonumentaExtension {
     fun versionAdapterApi(name: String, paper: String? = null, config: Project.() -> Unit = {})
     fun versionAdapterUnsupported(name: String, config: Project.() -> Unit = {})
     fun versionAdapter(name: String, devBundle: String, config: Project.() -> Unit = {})
+    fun javaSimple(name: String, config: Project.() -> Unit = {})
 
     fun publishingCredentials(name: String, token: String)
 }

@@ -114,7 +114,8 @@ internal class MonumentaExtensionImpl(private val target: Project) : MonumentaEx
     private var adapterApiProject: Project? = null
     private var adapterApiPaperDep: String? = null
     private var adapterUnsupportedProject: Project? = null
-    private val adapterImplementations: MutableList<Pair<Project, String>> = mutableListOf()
+    private val simpleProjects: MutableList<Project> = ArrayList()
+    private val adapterImplementations: MutableList<Pair<Project, String>> = ArrayList()
 
     private fun findSubproject(name: String, config: Project.() -> Unit): Project {
         val res = target.findProject(name) ?: throw IllegalArgumentException("Unknown subproject '$name'")
@@ -285,6 +286,10 @@ internal class MonumentaExtensionImpl(private val target: Project) : MonumentaEx
         adapterImplementations.forEach {
             configurePaperweightVersionAdapter(it.first, apiProject, it.second)
         }
+    }
+
+    override fun javaSimple(name: String, config: Project.() -> Unit) {
+        simpleProjects.add(findSubproject(name, config))
     }
 
     private fun afterEvaluate() {
