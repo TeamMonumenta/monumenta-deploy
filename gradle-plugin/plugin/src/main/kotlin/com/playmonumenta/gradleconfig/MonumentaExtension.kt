@@ -53,7 +53,8 @@ interface MonumentaExtension {
         authors: List<String> = listOf("Team Monumenta"),
         depends: List<String> = listOf(),
         softDepends: List<String> = listOf(),
-        apiJarVersion: String = "$apiVersion-R0.1-SNAPSHOT"
+        apiJarVersion: String = "$apiVersion-R0.1-SNAPSHOT",
+        action: BukkitPluginDescription.() -> Unit = {}
     )
 
     /**

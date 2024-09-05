@@ -175,7 +175,8 @@ internal class MonumentaExtensionImpl(private val target: Project) : MonumentaEx
         authors: List<String>,
         depends: List<String>,
         softDepends: List<String>,
-        apiJarVersion: String
+        apiJarVersion: String,
+        action: BukkitPluginDescription.() -> Unit
     ) {
         if (isBukkitConfigured) {
             throw IllegalStateException("Bukkit can't be configured multiple times")
@@ -189,14 +190,15 @@ internal class MonumentaExtensionImpl(private val target: Project) : MonumentaEx
 
         deferActions {
             pluginProject.applyPlugin("net.minecrell.plugin-yml.bukkit")
-            with(pluginProject.extensions.getByType(BukkitPluginDescription::class.java)) {
-                this.load = order
-                this.main = main
-                this.apiVersion = apiVersion
-                this.name = pluginName
-                this.authors = authors
-                this.depend = depends
-                this.softDepend = softDepends
+            pluginProject.extensions.getByType(BukkitPluginDescription::class.java).let {
+                it.load = order
+                it.main = main
+                it.apiVersion = apiVersion
+                it.name = pluginName
+                it.authors = authors
+                it.depend = depends
+                it.softDepend = softDepends
+                action(it)
             }
 
             pluginProject.addCompileOnly("io.papermc.paper:paper-api:$apiJarVersion")
