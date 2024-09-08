@@ -30,6 +30,13 @@ interface MonumentaExtension {
     fun name(name: String)
 
     /**
+     * Specifies an override for the deploy location.
+     *
+     * @param name The name of the plugin.
+     */
+    fun deploymentName(name: String)
+
+    /**
      * Specifies the project that contains the actual plugin.
      * This defaults to the root project, and is useful in cases with version adapters and such.
      *

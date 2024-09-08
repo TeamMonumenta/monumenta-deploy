@@ -106,6 +106,7 @@ internal class MonumentaExtensionImpl(private val target: Project) : MonumentaEx
     private var isBukkitConfigured: Boolean = false
     private var isBungeeConfigured: Boolean = false
     private var pluginName: String? = null
+    private var deploymentName: String? = null
 
     private val deferActions: MutableList<() -> Unit> = ArrayList()
 
@@ -142,6 +143,14 @@ internal class MonumentaExtensionImpl(private val target: Project) : MonumentaEx
         }
 
         this.pluginName = name
+    }
+
+    override fun deploymentName(name: String) {
+        if (deploymentName != null) {
+            throw IllegalStateException("deploymentName(...) can only be called once")
+        }
+
+        deploymentName = name
     }
 
     override fun pluginProject(path: String, config: Project.() -> Unit) {
@@ -343,6 +352,6 @@ internal class MonumentaExtensionImpl(private val target: Project) : MonumentaEx
             }
         }
 
-        easySetup(pluginProject, pluginProject.tasks.getByName("shadowJar") as Jar, pluginName!!)
+        easySetup(pluginProject, pluginProject.tasks.getByName("shadowJar") as Jar, deploymentName ?: pluginName!!)
     }
 }
