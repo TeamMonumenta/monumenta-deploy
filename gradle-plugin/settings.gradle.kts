@@ -1,4 +1,4 @@
-rootProject.name = "monumenta-ssh-deployment"
+rootProject.name = "monumenta-gradle-config"
 include("plugin")
 
 pluginManagement {
