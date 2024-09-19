@@ -10,11 +10,12 @@ plugins {
 }
 
 group = "com.playmonumenta.gradle-config"
-version = "1.4"
+version = "2.0"
 
 repositories {
     mavenCentral()
     gradlePluginPortal()
+    maven("https://maven.playmonumenta.com/releases/")
 }
 
 dependencies {
@@ -27,7 +28,7 @@ dependencies {
     implementation("net.minecrell:plugin-yml:0.6.0")
     implementation("com.palantir.gradle.gitversion:gradle-git-version:3.1.0")
     implementation("com.github.johnrengelman:shadow:8.1.1")
-    implementation("io.papermc.paperweight:paperweight-userdev:1.7.0")
+    implementation("com.playmonumenta.paperweight-aw:paperweight-userdev:1.1.2")
     shadowImplementation("com.github.mwiede:jsch:0.2.17")
 }
 
