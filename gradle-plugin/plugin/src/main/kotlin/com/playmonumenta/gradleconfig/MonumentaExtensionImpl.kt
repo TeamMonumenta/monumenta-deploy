@@ -84,6 +84,7 @@ private fun setupProject(project: Project, target: Project) {
     if (project.description == null) {
         project.description = project.path.substring(1)
     }
+    project.group = target.group
     project.version = target.version
 
     with(project.extensions.getByType(JavaPluginExtension::class.java)) {
@@ -261,7 +262,7 @@ internal class MonumentaExtensionImpl(private val target: Project) : MonumentaEx
 
     private fun configurePaperweightVersionAdapter(project: Project, apiProject: Project, devBundle: String) {
         project.addImplementation(apiProject)
-        project.applyPlugin("io.papermc.paperweight.userdev")
+        project.applyPlugin("com.playmonumenta.paperweight-aw.userdev")
 
         project.dependencies.extensions.getByType(PaperweightUserDependenciesExtension::class.java)
             .paperDevBundle("${devBundle}-R0.1-SNAPSHOT")
