@@ -82,6 +82,7 @@ fun easyCreateNormalDeploy(
     shadowJarTask: Jar,
     ssh: RemoteConfig,
     name: String,
+    projectName: String,
     lockConfig: ShardLockInfo?,
     vararg paths: String
 ) {
@@ -93,18 +94,18 @@ fun easyCreateNormalDeploy(
             lockConfig?.doLock(this)
 
             for (path in paths)
-                execute("cd $path && rm -f ${shadowJarTask.archiveBaseName.get()}*.jar")
+                execute("cd $path && rm -f ${projectName}*.jar")
             for (path in paths)
-                put(shadowJarTask.archiveFile.get().asFile, path)
+                put(shadowJarTask.archiveFile.get().asFile, "${path}/${projectName}-${project.version}.jar")
         }
     }
 
     easyConfigureDeployTask(project, shadowJarTask, "$name-deploy", "Deploy") {
         with(SessionHandler(ssh)) {
             for (path in paths)
-                execute("cd $path && rm -f ${shadowJarTask.archiveBaseName.get()}*.jar")
+                execute("cd $path && rm -f ${projectName}*.jar")
             for (path in paths)
-                put(shadowJarTask.archiveFile.get().asFile, path)
+                put(shadowJarTask.archiveFile.get().asFile, "${path}/${projectName}-${project.version}.jar")
         }
     }
 }
@@ -142,9 +143,10 @@ fun easyCreateSymlinkDeploy(
     }
 }
 
-fun easySetup(project: Project, shadowJarTask: Jar, fileName: String) {
+fun easySetup(project: Project, shadowJarTask: Jar) {
     val basicssh = easyCreateRemote("basicssh", 8822)
     val adminssh = easyCreateRemote("adminssh", 9922)
+    val projectName = shadowJarTask.archiveBaseName.get()
 
     for (i in 1..4) {
         easyCreateNormalDeploy(
@@ -152,6 +154,7 @@ fun easySetup(project: Project, shadowJarTask: Jar, fileName: String) {
             shadowJarTask,
             basicssh,
             "dev$i",
+            projectName,
             ShardLockInfo("build", "dev$i", 30),
             "/home/epic/dev${i}_shard_plugins"
         )
@@ -162,6 +165,7 @@ fun easySetup(project: Project, shadowJarTask: Jar, fileName: String) {
         shadowJarTask,
         basicssh,
         "futurama",
+        projectName,
         ShardLockInfo("build", "futurama", 30),
         "/home/epic/futurama_shard_plugins"
     )
@@ -171,6 +175,7 @@ fun easySetup(project: Project, shadowJarTask: Jar, fileName: String) {
         shadowJarTask,
         basicssh,
         "mob",
+        projectName,
         ShardLockInfo("build", "mob", 30),
         "/home/epic/mob_shard_plugins"
     )
@@ -180,7 +185,7 @@ fun easySetup(project: Project, shadowJarTask: Jar, fileName: String) {
         shadowJarTask,
         basicssh,
         "stage",
-        fileName,
+        projectName,
         ShardLockInfo("stage", "*", 30),
         "/home/epic/stage/m13/server_config/plugins"
     )
@@ -190,7 +195,7 @@ fun easySetup(project: Project, shadowJarTask: Jar, fileName: String) {
         shadowJarTask,
         basicssh,
         "volt",
-        fileName,
+        projectName,
         ShardLockInfo("volt", "*", 30),
         "/home/epic/volt/m12/server_config/plugins",
         "/home/epic/volt/m13/server_config/plugins"
@@ -201,7 +206,7 @@ fun easySetup(project: Project, shadowJarTask: Jar, fileName: String) {
         shadowJarTask,
         adminssh,
         "m119",
-        fileName,
+        projectName,
         ShardLockInfo("build", "m119", 30),
         "/home/epic/project_epic/m119/plugins"
     )
@@ -211,7 +216,7 @@ fun easySetup(project: Project, shadowJarTask: Jar, fileName: String) {
         shadowJarTask,
         adminssh,
         "build",
-        fileName,
+        projectName,
         ShardLockInfo("build", "*", 0, true),
         "/home/epic/project_epic/server_config/plugins"
     )
@@ -221,7 +226,7 @@ fun easySetup(project: Project, shadowJarTask: Jar, fileName: String) {
         shadowJarTask,
         adminssh,
         "play",
-        fileName,
+        projectName,
         ShardLockInfo("play", "*", 0, true),
         "/home/epic/play/m12/server_config/plugins",
         "/home/epic/play/m13/server_config/plugins",

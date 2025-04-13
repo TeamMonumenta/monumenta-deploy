@@ -7,12 +7,15 @@ import net.minecrell.pluginyml.bukkit.BukkitPluginDescription
 import net.minecrell.pluginyml.bungee.BungeePluginDescription
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
+import org.gradle.api.plugins.BasePluginExtension
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.plugins.quality.CheckstyleExtension
 import org.gradle.api.plugins.quality.PmdExtension
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.api.tasks.javadoc.Javadoc
+import org.gradle.external.javadoc.StandardJavadocDocletOptions
 import org.gradle.jvm.tasks.Jar
 import java.net.URI
 
@@ -69,6 +72,10 @@ private fun setupProject(project: Project, target: Project) {
         }
     }
 
+    with(project.tasks.getByName("javadoc") as Javadoc) {
+        (options as StandardJavadocDocletOptions).addBooleanOption("Xdoclint:none", true)
+    }
+
     with(project.extensions.getByType(PmdExtension::class.java)) {
         isConsoleOutput = true
         toolVersion = "7.2.0"
@@ -107,7 +114,8 @@ internal class MonumentaExtensionImpl(private val target: Project) : MonumentaEx
     private var isBukkitConfigured: Boolean = false
     private var isBungeeConfigured: Boolean = false
     private var pluginName: String? = null
-    private var deploymentName: String? = null
+    private var pluginId: String? = null
+    private var disableMaven: Boolean = false
 
     private val deferActions: MutableList<() -> Unit> = ArrayList()
 
@@ -138,6 +146,14 @@ internal class MonumentaExtensionImpl(private val target: Project) : MonumentaEx
         releasesUrl = url
     }
 
+    override fun id(id: String) {
+        if (pluginId != null) {
+            throw IllegalStateException("id(...) can only be called once")
+        }
+
+        this.pluginId = id
+    }
+
     override fun name(name: String) {
         if (pluginName != null) {
             throw IllegalStateException("name(...) can only be called once")
@@ -146,12 +162,8 @@ internal class MonumentaExtensionImpl(private val target: Project) : MonumentaEx
         this.pluginName = name
     }
 
-    override fun deploymentName(name: String) {
-        if (deploymentName != null) {
-            throw IllegalStateException("deploymentName(...) can only be called once")
-        }
-
-        deploymentName = name
+    override fun disableMaven() {
+        disableMaven = true
     }
 
     override fun pluginProject(path: String, config: Project.() -> Unit) {
@@ -193,8 +205,8 @@ internal class MonumentaExtensionImpl(private val target: Project) : MonumentaEx
             throw IllegalStateException("Bukkit can't be configured multiple times")
         }
 
-        if (this.pluginName == null) {
-            throw IllegalStateException("name(...) must be called first")
+        if (this.pluginId == null) {
+            throw IllegalStateException("id(...) must be called first")
         }
 
         isBukkitConfigured = true
@@ -205,7 +217,7 @@ internal class MonumentaExtensionImpl(private val target: Project) : MonumentaEx
                 it.load = order
                 it.main = main
                 it.apiVersion = apiVersion
-                it.name = pluginName
+                it.name = pluginId
                 it.authors = authors
                 it.depend = depends
                 it.softDepend = softDepends
@@ -227,15 +239,15 @@ internal class MonumentaExtensionImpl(private val target: Project) : MonumentaEx
             throw IllegalStateException("Bungee can't be configured multiple times")
         }
 
-        if (this.pluginName == null) {
-            throw IllegalStateException("name(...) must be called first")
+        if (this.pluginId == null) {
+            throw IllegalStateException("id(...) must be called first")
         }
 
         deferActions {
             pluginProject.applyPlugin("net.minecrell.plugin-yml.bungee")
             with(pluginProject.extensions.getByType(BungeePluginDescription::class.java)) {
                 this.main = main
-                this.name = pluginName
+                this.name = pluginId
                 this.author = authors.joinToString(", ")
                 this.depends = setOf(*depends.toTypedArray())
                 this.softDepends = setOf(*softDepends.toTypedArray())
@@ -304,7 +316,11 @@ internal class MonumentaExtensionImpl(private val target: Project) : MonumentaEx
 
     private fun afterEvaluate() {
         if (this.pluginName == null) {
-            throw IllegalStateException("name(...) must be called first")
+            throw IllegalStateException("name(...) must be called")
+        }
+
+        if (this.pluginId == null) {
+            throw IllegalStateException("id(...) must be called")
         }
 
         pluginProject.applyPlugin(
@@ -328,31 +344,38 @@ internal class MonumentaExtensionImpl(private val target: Project) : MonumentaEx
 
         deferActions.forEach { it() }
 
-        with(pluginProject.extensions.getByType(PublishingExtension::class.java)) {
-            publications { container ->
-                container.create("maven", MavenPublication::class.java) {
-                    if (hasAdapter) {
-                        it.artifact(pluginProject.tasks.getByName("shadowJar"))
-                        it.artifact(pluginProject.tasks.getByName("javadocJar"))
-                        it.artifact(pluginProject.tasks.getByName("sourcesJar"))
-                    } else {
-                        it.from(pluginProject.components.getByName("java"))
+        if(disableMaven) {
+            with(pluginProject.extensions.getByType(PublishingExtension::class.java)) {
+                publications { container ->
+                    container.create("maven", MavenPublication::class.java) {
+                        if (hasAdapter) {
+                            it.artifact(pluginProject.tasks.getByName("shadowJar"))
+                            it.artifact(pluginProject.tasks.getByName("javadocJar"))
+                            it.artifact(pluginProject.tasks.getByName("sourcesJar"))
+                        } else {
+                            it.from(pluginProject.components.getByName("java"))
+                        }
                     }
                 }
-            }
-            repositories { repo ->
-                repo.maven { maven ->
-                    maven.name = "MainMaven"
-                    maven.url =
-                        URI(if (pluginProject.version.toString().endsWith("SNAPSHOT")) snapshotUrl else releasesUrl)
-                    maven.credentials { cred ->
-                        cred.username = mavenUsername
-                        cred.password = mavenPassword
+                repositories { repo ->
+                    repo.maven { maven ->
+                        maven.name = "MainMaven"
+                        maven.url =
+                            URI(if (pluginProject.version.toString().endsWith("SNAPSHOT")) snapshotUrl else releasesUrl)
+                        maven.credentials { cred ->
+                            cred.username = mavenUsername
+                            cred.password = mavenPassword
+                        }
                     }
+                    repo.mavenLocal()
                 }
             }
         }
 
-        easySetup(pluginProject, pluginProject.tasks.getByName("shadowJar") as Jar, deploymentName ?: pluginName!!)
+        with(pluginProject.extensions.getByType(BasePluginExtension::class.java)) {
+            archivesName.set(pluginName)
+        }
+
+        easySetup(pluginProject, pluginProject.tasks.getByName("shadowJar") as Jar)
     }
 }

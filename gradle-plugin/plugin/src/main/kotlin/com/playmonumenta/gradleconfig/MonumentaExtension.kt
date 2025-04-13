@@ -23,18 +23,23 @@ interface MonumentaExtension {
     fun releasesRepo(url: String)
 
     /**
+     * Specifies the plugin id of the plugin.
+     *
+     * @param id the "plugin" name of the plugin, used in some places like bukkit configuration.
+     */
+    fun id(id: String)
+
+    /**
      * Specifies the name of the plugin.
      *
-     * @param name The name of the plugin, used in some places like bukkit configuration and deploy.
+     * @param name The name of the plugin, used in some places like deploy.
      */
     fun name(name: String)
 
     /**
-     * Specifies an override for the deploy location.
-     *
-     * @param name The name of the plugin.
+     * Disables maven publishing for this project.
      */
-    fun deploymentName(name: String)
+    fun disableMaven();
 
     /**
      * Specifies the project that contains the actual plugin.
