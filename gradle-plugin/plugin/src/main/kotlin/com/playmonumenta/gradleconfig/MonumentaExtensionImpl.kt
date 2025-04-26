@@ -344,7 +344,7 @@ internal class MonumentaExtensionImpl(private val target: Project) : MonumentaEx
 
         deferActions.forEach { it() }
 
-        if(disableMaven) {
+        if(!disableMaven) {
             with(pluginProject.extensions.getByType(PublishingExtension::class.java)) {
                 publications { container ->
                     container.create("maven", MavenPublication::class.java) {
