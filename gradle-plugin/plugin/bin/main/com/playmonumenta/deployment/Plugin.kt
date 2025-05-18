@@ -168,7 +168,7 @@ class Service(private val proj: Project, private val remotes: NamedDomainObjectC
             fileName,
             ShardLockInfo("volt", "*", 30),
             "/home/epic/volt/m12/server_config/plugins",
-            "/home/epic/volt/m13/server_config/plugins"
+            "/home/epic/volt/m18/server_config/plugins"
         )
 
         easyCreateSymlinkDeploy(
@@ -196,7 +196,7 @@ class Service(private val proj: Project, private val remotes: NamedDomainObjectC
             fileName,
             ShardLockInfo("play", "*", 0, true),
             "/home/epic/play/m12/server_config/plugins",
-            "/home/epic/play/m13/server_config/plugins",
+            "/home/epic/play/m18/server_config/plugins",
             "/home/epic/play/m17/server_config/plugins"
         )
     }
