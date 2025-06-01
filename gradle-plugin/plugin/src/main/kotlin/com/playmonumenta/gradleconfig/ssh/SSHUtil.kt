@@ -228,7 +228,6 @@ fun easySetup(project: Project, shadowJarTask: Jar) {
         "play",
         projectName,
         ShardLockInfo("play", "*", 0, true),
-        "/home/epic/play/m12/server_config/plugins",
         "/home/epic/play/m17/server_config/plugins",
         "/home/epic/play/m18/server_config/plugins"
     )
