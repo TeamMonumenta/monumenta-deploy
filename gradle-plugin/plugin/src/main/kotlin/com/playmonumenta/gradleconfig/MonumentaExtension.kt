@@ -39,7 +39,12 @@ interface MonumentaExtension {
     /**
      * Disables maven publishing for this project.
      */
-    fun disableMaven();
+    fun disableMaven()
+
+    /**
+     * Disables javadoc for this project.
+     */
+    fun disableJavadoc()
 
     /**
      * Specifies the project that contains the actual plugin.

@@ -9,6 +9,7 @@ import org.gradle.api.JavaVersion
 import org.gradle.api.Project
 import org.gradle.api.plugins.BasePluginExtension
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.plugins.quality.Checkstyle
 import org.gradle.api.plugins.quality.CheckstyleExtension
 import org.gradle.api.plugins.quality.PmdExtension
 import org.gradle.api.publish.PublishingExtension
@@ -19,7 +20,7 @@ import org.gradle.external.javadoc.StandardJavadocDocletOptions
 import org.gradle.jvm.tasks.Jar
 import java.net.URI
 
-private fun setupProject(project: Project, target: Project) {
+private fun setupProject(project: Project, target: Project, javadoc: Boolean) {
     project.applyPlugin(
         "pmd",
         "java-library",
@@ -78,13 +79,18 @@ private fun setupProject(project: Project, target: Project) {
 
     with(project.extensions.getByType(PmdExtension::class.java)) {
         isConsoleOutput = true
-        toolVersion = "7.2.0"
+        toolVersion = "7.13.0"
         ruleSetConfig = project.embeddedResource("/pmd-ruleset.xml")
         isIgnoreFailures = true
     }
 
     with(project.extensions.getByType(CheckstyleExtension::class.java)) {
         config = project.embeddedResource("/checkstyle.xml")
+    }
+
+    project.tasks.withType(Checkstyle::class.java) {
+        it.minHeapSize.set("200m")
+        it.maxHeapSize.set("1g")
     }
 
     project.charset("UTF-8")
@@ -95,7 +101,10 @@ private fun setupProject(project: Project, target: Project) {
     project.version = target.version
 
     with(project.extensions.getByType(JavaPluginExtension::class.java)) {
-        withJavadocJar()
+        if(javadoc) {
+            withJavadocJar()
+        }
+
         withSourcesJar()
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -116,6 +125,7 @@ internal class MonumentaExtensionImpl(private val target: Project) : MonumentaEx
     private var pluginName: String? = null
     private var pluginId: String? = null
     private var disableMaven: Boolean = false
+    private var disableJavadoc: Boolean = false
 
     private val deferActions: MutableList<() -> Unit> = ArrayList()
 
@@ -164,6 +174,10 @@ internal class MonumentaExtensionImpl(private val target: Project) : MonumentaEx
 
     override fun disableMaven() {
         disableMaven = true
+    }
+
+    override fun disableJavadoc() {
+        disableJavadoc = true
     }
 
     override fun pluginProject(path: String, config: Project.() -> Unit) {
@@ -334,7 +348,7 @@ internal class MonumentaExtensionImpl(private val target: Project) : MonumentaEx
             adapterUnsupportedProject,
             *simpleProjects.toTypedArray(),
             *adapterImplementations.map { it.first }.toTypedArray()
-        ).filterNotNull().forEach { setupProject(it, target) }
+        ).filterNotNull().forEach { setupProject(it, target, !disableJavadoc) }
 
         if (hasAdapter) {
             val apiProject = adapterApiProject
