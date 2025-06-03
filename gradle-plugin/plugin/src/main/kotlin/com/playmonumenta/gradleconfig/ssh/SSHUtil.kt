@@ -197,7 +197,7 @@ fun easySetup(project: Project, shadowJarTask: Jar) {
         "volt",
         projectName,
         ShardLockInfo("volt", "*", 30),
-        "/home/epic/volt/m12/server_config/plugins",
+        "/home/epic/volt/m17/server_config/plugins",
         "/home/epic/volt/m18/server_config/plugins"
     )
 
