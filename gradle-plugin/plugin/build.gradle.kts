@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "com.playmonumenta.gradle-config"
-version = "3.2"
+version = "3.3"
 
 repositories {
     mavenCentral()
@@ -19,17 +19,18 @@ repositories {
 }
 
 dependencies {
-    implementation("com.github.mwiede:jsch:0.2.17")
-    implementation("net.java.dev.jna:jna:5.14.0")
-    implementation("net.java.dev.jna:jna-platform:5.14.0")
-    implementation("com.kohlschutter.junixsocket:junixsocket-core:2.10.0")
-    implementation("net.ltgt.gradle:gradle-errorprone-plugin:3.1.0")
-    implementation("net.ltgt.gradle:gradle-nullaway-plugin:2.0.0")
-    implementation("net.minecrell:plugin-yml:0.6.0")
-    implementation("com.palantir.gradle.gitversion:gradle-git-version:3.1.0")
-    implementation("com.github.johnrengelman:shadow:8.1.1")
-    implementation("com.playmonumenta.paperweight-aw:paperweight-userdev:1.1.2")
-    shadowImplementation("com.github.mwiede:jsch:0.2.17")
+    implementation(libs.jsch)
+    implementation(libs.jna)
+    implementation(libs.jna.platform)
+    implementation(libs.junixsocket.core)
+    implementation(libs.errorprone.plugin)
+    implementation(libs.nullaway.plugin)
+    implementation(libs.plugin.yml)
+    implementation(libs.git.version)
+    implementation(libs.shadow)
+    implementation(libs.paperweight.userdev)
+
+    shadowImplementation(libs.jsch)
 }
 
 kotlin {
