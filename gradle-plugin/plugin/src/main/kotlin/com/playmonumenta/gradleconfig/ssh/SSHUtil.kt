@@ -187,6 +187,7 @@ fun easySetup(project: Project, shadowJarTask: Jar) {
         "stage",
         projectName,
         ShardLockInfo("stage", "*", 30),
+        "/home/epic/stage/m17/server_config/plugins",
         "/home/epic/stage/m18/server_config/plugins"
     )
 
