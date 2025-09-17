@@ -1,6 +1,8 @@
 package com.playmonumenta.gradleconfig
 
+import com.palantir.gradle.gitversion.VersionDetails
 import com.playmonumenta.gradleconfig.ssh.easySetup
+import groovy.lang.Closure
 import io.papermc.paperweight.userdev.PaperweightUserDependenciesExtension
 import net.ltgt.gradle.errorprone.CheckSeverity
 import net.minecrell.pluginyml.bukkit.BukkitPluginDescription
@@ -8,6 +10,7 @@ import net.minecrell.pluginyml.bungee.BungeePluginDescription
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
 import org.gradle.api.plugins.BasePluginExtension
+import org.gradle.api.plugins.ExtraPropertiesExtension
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.plugins.quality.Checkstyle
 import org.gradle.api.plugins.quality.CheckstyleExtension
@@ -89,7 +92,7 @@ private fun setupProject(project: Project, target: Project, javadoc: Boolean) {
     }
 
     project.tasks.withType(Checkstyle::class.java) {
-        it.minHeapSize.set("200m")
+        it.minHeapSize.set("1g")
         it.maxHeapSize.set("1g")
     }
 
@@ -109,6 +112,19 @@ private fun setupProject(project: Project, target: Project, javadoc: Boolean) {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+}
+
+private fun setupVersion(project: Project, prefix: String?) {
+    project.applyPlugin("com.palantir.git-version")
+    val extra = project.extensions.getByType(ExtraPropertiesExtension::class.java)
+
+    val gitVersion = extra.get("gitVersion") as Closure<String>
+    val versionDetails = extra.get("versionDetails") as Closure<VersionDetails>
+
+    project.group = "com.playmonumenta"
+
+    val gitResult = prefix?.let { gitVersion.call(mapOf("prefix" to it)) } ?: gitVersion.call(prefix)
+    project.version = gitResult + (if (versionDetails.call().isCleanTag) "" else "-SNAPSHOT")
 }
 
 internal class MonumentaExtensionImpl(private val target: Project) : MonumentaExtension {
@@ -136,6 +152,7 @@ internal class MonumentaExtensionImpl(private val target: Project) : MonumentaEx
     private var adapterUnsupportedProject: Project? = null
     private val simpleProjects: MutableList<Project> = ArrayList()
     private val adapterImplementations: MutableList<Pair<Project, String>> = ArrayList()
+    private var gitPrefix: String? = null
 
     private fun findSubproject(name: String, config: Project.() -> Unit): Project {
         val res = target.findProject(name) ?: throw IllegalArgumentException("Unknown subproject '$name'")
@@ -329,6 +346,8 @@ internal class MonumentaExtensionImpl(private val target: Project) : MonumentaEx
     }
 
     private fun afterEvaluate() {
+        setupVersion(target, gitPrefix)
+
         if (this.pluginName == null) {
             throw IllegalStateException("name(...) must be called")
         }
@@ -391,5 +410,9 @@ internal class MonumentaExtensionImpl(private val target: Project) : MonumentaEx
         }
 
         easySetup(pluginProject, pluginProject.tasks.getByName("shadowJar") as Jar)
+    }
+
+    override fun gitPrefix(prefix: String) {
+        gitPrefix = prefix
     }
 }

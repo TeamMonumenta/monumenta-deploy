@@ -97,4 +97,6 @@ interface MonumentaExtension {
     fun javaSimple(name: String, config: Project.() -> Unit = {})
 
     fun publishingCredentials(name: String, token: String)
+
+    fun gitPrefix(prefix: String)
 }
